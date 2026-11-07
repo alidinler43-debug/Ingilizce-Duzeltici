@@ -14,10 +14,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Projeyi aç
+      - name: Projeyi bul ve aç
         run: |
-          unzip -o -q android-project.zip -d proje
-          echo "KOK=$(dirname "$(find proje -name settings.gradle | head -n 1)")" >> $GITHUB_ENV
+          echo "Depodaki dosyalar:"
+          find . -path ./.git -prune -o -type f -print
+          ZIP=""
+          if [ -f android-project.zip ]; then
+            ZIP=android-project.zip
+          else
+            ZIP=$(find . -path ./.git -prune -o -type f -iname "*.zip" -print | head -n 1)
+          fi
+          if [ -n "$ZIP" ]; then
+            echo "Kullanılan zip: $ZIP"
+            unzip -o -q "$ZIP" -d proje
+          fi
+          AYAR=$(find proje -name settings.gradle 2>/dev/null | head -n 1)
+          if [ -z "$AYAR" ]; then
+            AYAR=$(find . -path ./.git -prune -o -name settings.gradle -print | head -n 1)
+          fi
+          if [ -z "$AYAR" ]; then
+            echo "Proje bulunamadı: depoda zip ya da settings.gradle yok."
+            exit 1
+          fi
+          echo "KOK=$(dirname "$AYAR")" >> $GITHUB_ENV
 
       - uses: actions/setup-java@v4
         with:
