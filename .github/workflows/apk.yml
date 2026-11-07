@@ -1,0 +1,43 @@
+name: APK oluştur
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Projeyi aç
+        run: |
+          unzip -o -q android-project.zip -d proje
+          echo "KOK=$(dirname "$(find proje -name settings.gradle | head -n 1)")" >> $GITHUB_ENV
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle indir
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
+          unzip -q gradle-8.9-bin.zip -d $HOME
+
+      - name: APK derle
+        run: |
+          cd "$KOK"
+          $HOME/gradle-8.9/bin/gradle assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Duzeltici.apk"
+
+      - name: Releases'a yükle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: İngilizce Düzeltici v${{ github.run_number }}
+          files: Duzeltici.apk
