@@ -15,24 +15,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Projeyi bul ve aç
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Derle
         run: |
-          echo "Depodaki dosyalar:"
-          find . -path ./.git -prune -o -type f -print
-          # En son yüklenen zip'i bul (adı ne olursa olsun)
-          LISTE=$(git -c core.quotePath=false log --name-only --pretty=format: -- '*.zip' '*.ZIP' 2>/dev/null || true)
-          ZIP=""
-          while IFS= read -r f; do
-            if [ -n "$f" ] && [ -f "$f" ]; then ZIP="$f"; break; fi
-          done <<< "$LISTE"
-          if [ -z "$ZIP" ]; then
-            ZIP=$(find . -path ./.git -prune -o -type f -iname "*.zip" -print | head -n 1 || true)
-          fi
-          if [ -n "$ZIP" ]; then
-            echo "Kullanılan zip: $ZIP"
-            unzip -o -q "$ZIP" -d proje
-          fi
-          AYAR=$(find proje -name settings.gradle 2>/dev/null | head -n 1 || true)
-          if [ -z "$AYAR" ]; then
-            AYAR=$(find . -path ./.git -prune -o -name setti
+          Z=$(git log --name-only --pretty=format: -- '*.zip' | sed '/^$/d' | head -n 1 || true)
+          echo "Kullanılan zip: $Z"
+          unzip -o -q "$Z" -d proje
+          bash proje/derle.sh
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          files: Duzeltici.apk
