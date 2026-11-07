@@ -13,50 +13,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Projeyi bul ve aç
         run: |
           echo "Depodaki dosyalar:"
           find . -path ./.git -prune -o -type f -print
+          # En son yüklenen zip'i bul (adı ne olursa olsun)
+          LISTE=$(git -c core.quotePath=false log --name-only --pretty=format: -- '*.zip' '*.ZIP' 2>/dev/null || true)
           ZIP=""
-          if [ -f android-project.zip ]; then
-            ZIP=android-project.zip
-          else
-            ZIP=$(find . -path ./.git -prune -o -type f -iname "*.zip" -print | head -n 1)
+          while IFS= read -r f; do
+            if [ -n "$f" ] && [ -f "$f" ]; then ZIP="$f"; break; fi
+          done <<< "$LISTE"
+          if [ -z "$ZIP" ]; then
+            ZIP=$(find . -path ./.git -prune -o -type f -iname "*.zip" -print | head -n 1 || true)
           fi
           if [ -n "$ZIP" ]; then
             echo "Kullanılan zip: $ZIP"
             unzip -o -q "$ZIP" -d proje
           fi
-          AYAR=$(find proje -name settings.gradle 2>/dev/null | head -n 1)
+          AYAR=$(find proje -name settings.gradle 2>/dev/null | head -n 1 || true)
           if [ -z "$AYAR" ]; then
-            AYAR=$(find . -path ./.git -prune -o -name settings.gradle -print | head -n 1)
-          fi
-          if [ -z "$AYAR" ]; then
-            echo "Proje bulunamadı: depoda zip ya da settings.gradle yok."
-            exit 1
-          fi
-          echo "KOK=$(dirname "$AYAR")" >> $GITHUB_ENV
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Gradle indir
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
-          unzip -q gradle-8.9-bin.zip -d $HOME
-
-      - name: APK derle
-        run: |
-          cd "$KOK"
-          $HOME/gradle-8.9/bin/gradle assembleRelease --no-daemon --stacktrace
-          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Duzeltici.apk"
-
-      - name: Releases'a yükle
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}
-          name: İngilizce Düzeltici v${{ github.run_number }}
-          files: Duzeltici.apk
+            AYAR=$(find . -path ./.git -prune -o -name setti
